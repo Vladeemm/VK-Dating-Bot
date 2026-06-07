@@ -10,7 +10,7 @@
 
 3. update_status(user_vk_id, step, **kwargs) -> bool:
 
-    *Через **kwargs, в зависимости от действия User добавляется именованный аргумент в поле seqrc_criteria*
+    *Через **kwargs, в зависимости от действия User добавляется именованный аргумент в поле search_criteria*
 
     *Внутри метода, с помощью datetime добавляем step_datetime*
 
@@ -26,3 +26,12 @@
 
 7. get_search_criteria(user_vk_id) -> dict[search_criteria]
 
+**Работа с VK API:**
+
+1. get_user_info_from_vk(user_vk_id) -> list[name, city, age]:
+
+2. get_questionnaires_by_criteria(age_from, age_to, city, gender) -> list[dicts by vk_ids]
+    *Получаем JSON, преобразовываем, фильтруем что бы аккаунты были открыты.
+    Через fields=counters пытаемся также фильтровать людей с фото больше 3**
+
+3. get_questionnaire_photos(questionnaire_vk_id) -> dict[photos]
