@@ -3,8 +3,7 @@ import requests
 import vk_api
 from random import randrange
 from dotenv import load_dotenv
-from vk_api import longpoll
-from vk_api.longpoll import VkEventType
+from vk_api.longpoll import VkEventType, VkLongPoll
 
 try:
     load_file = load_dotenv()
@@ -17,6 +16,7 @@ except Exception as e:
     raise Exception(f"Ошибка подключения к VK API: {e}")
 
 vk = vk_api.VkApi(token=token)
+longpoll = VkLongPoll(vk, wait=2)
 
 def write_message(user_id, message, keyboard=None):
     """Бот отправляет сообщения в чат"""
@@ -31,12 +31,13 @@ def write_message(user_id, message, keyboard=None):
 
     vk.method('messages.send', params)
 
-def text_message():
-    """Функция для определения поступивших сообщений из чата"""
+def text_message(user_id):
+    """Функция для определения поступивших сообщений из конкретного чата"""
     for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            message = event.text.lower()
-    return message
+        if event.type == VkEventType.MESSAGE_NEW and event.user_id == user_id:
+            message = event.text
+            return message
+    return None
 
 
 def check_city(city_name, country_id=1):
@@ -52,7 +53,10 @@ def check_city(city_name, country_id=1):
                             )
     data = response.json()
 
-    if 'response' in data and data['response']['count'] > 0:
-        return True
-    else:
+    if 'response' in data and data['response']['count'] == 0:
         return False
+    cities = data['response']['items']
+    for city in cities:
+        if city['title'].lower() == city_name.lower():
+            return True
+    return False

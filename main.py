@@ -1,14 +1,13 @@
 """Модуль с ботом который находит во "ВКонтакте" людей по интересам.
 Этот модуль содержит обработчики команд и сообщений для VK бота DatingBot.
 """
-import datetime
 import os
 import vk_api
 from dotenv import load_dotenv
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from DatingBotBase import session
 from vk_api.longpoll import VkLongPoll, VkEventType
-from actions import write_message, text_message
+from actions import write_message, check_city, text_message
 from models import Users, Status
 from datetime import datetime
 
@@ -98,26 +97,33 @@ def preference_formation(user_vk, message):
         session.commit()
         return
 
+
     elif user_status.step == CHOOSING_CITY:
-        city = message # текст который введет пользователь
+        city = message  # текст который введет пользователь
+        if not check_city(city):
+            write_message(user_vk, "Возможна ошибка, такой город не найден.\n"
+                                   "Попробуйте еще раз.")
+            return
+
         # К словарю просто добавляем новый ключ значение
         user_status.search_criteria = {**user_status.search_criteria, 'city': city}
         session.commit()
 
-        write_message(user_vk, "Какой пол тебя интересует? (М/Ж)")
+        keyboard = VkKeyboard(one_time=True)
+        keyboard.add_button('Муж.', color=VkKeyboardColor.PRIMARY)
+        keyboard.add_button('Жен.', color=VkKeyboardColor.PRIMARY)
+        write_message(user_vk, "Какой пол тебя интересует? (М/Ж)",
+                      keyboard=keyboard.get_keyboard())
         user_status.step = CHOOSING_GENDER
         session.commit()
         return
 
     elif user_status.step == CHOOSING_GENDER:
-        keyboard = VkKeyboard(one_time=True)
-        keyboard.add_button('М', color=VkKeyboardColor.PRIMARY)
-        keyboard.add_button('Ж', color=VkKeyboardColor.PRIMARY)
-
-        gender = "male" if text_message() == "м" else "female"
+        gender = "male" if message == "Муж." else "female"
         user_status.search_criteria = {**user_status.search_criteria, 'gender': gender}
         session.commit()
 
+        write_message(user_vk, "Выберите возраст ОТ (18-99 лет)")
         write_message(user_vk, "Какой минимальный возраст тебя интересует?")
         user_status.step = CHOOSING_AGE_FROM
         session.commit()
@@ -125,6 +131,13 @@ def preference_formation(user_vk, message):
 
     elif user_status.step == CHOOSING_AGE_FROM:
         age = message
+        #надо проверить на веденное значение, что там не буквы
+
+        while int(age) < 18 or int(age) > 90:
+            write_message(user_vk, "Пожалуйста, ввести корректное число.\n"
+                                   "Попробуйте еще раз.")
+            age = text_message(user_vk)
+
         user_status.search_criteria = {**user_status.search_criteria, 'age_from': age}
         session.commit()
 
@@ -135,6 +148,11 @@ def preference_formation(user_vk, message):
 
     elif user_status.step == CHOOSING_AGE_TO:
         age = message
+        while int(age) < 18 or int(age) > 90:
+            write_message(user_vk, "Пожалуйста, ввести корректное число.\n"
+                                   "Попробуйте еще раз.")
+            age = text_message(user_vk)
+
         user_status.search_criteria = {**user_status.search_criteria, 'age_to': age}
         session.commit()
 
