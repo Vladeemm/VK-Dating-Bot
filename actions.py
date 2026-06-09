@@ -1,4 +1,5 @@
 import os
+import requests
 import vk_api
 from random import randrange
 from dotenv import load_dotenv
@@ -10,6 +11,7 @@ try:
     if not load_file:
         print("Файл не найден")
     token = os.getenv('BOT_TOKEN')
+    my_token = os.getenv('MY_VK_TOKEN')
 
 except Exception as e:
     raise Exception(f"Ошибка подключения к VK API: {e}")
@@ -35,3 +37,22 @@ def text_message():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             message = event.text.lower()
     return message
+
+
+def check_city(city_name, country_id=1):
+    """Функция проверки существующего города в России"""
+    params = {
+        'country_id': country_id,
+        'q': city_name,
+        'v': '5.199',
+        'access_token': my_token
+    }
+    response = requests.get('https://api.vk.com/method/database.getCities',
+                            params=params
+                            )
+    data = response.json()
+
+    if 'response' in data and data['response']['count'] > 0:
+        return True
+    else:
+        return False

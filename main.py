@@ -2,19 +2,30 @@
 Этот модуль содержит обработчики команд и сообщений для VK бота DatingBot.
 """
 import datetime
-import random
-import time
 import os
 import vk_api
 from dotenv import load_dotenv
-from vk_api.bot_longpoll import VkBotEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from DatingBotBase import session
-from random import randrange
 from vk_api.longpoll import VkLongPoll, VkEventType
 from actions import write_message, text_message
 from models import Users, Status
 from datetime import datetime
+
+
+""" Статусы Пользователя в VK Bot """
+START = 'start'
+START_MESSAGING = 'start_messaging'
+VIEW_HELP = 'view_help'
+IN_MAIN_MENU = 'in_main_menu'
+VIEWING_FAVORITES = 'listing_favorites'
+CHOOSING_CITY = 'choosing_city'
+CHOOSING_GENDER = 'choosing_gender'
+CHOOSING_AGE_FROM = 'choosing_age_from'
+CHOOSING_AGE_TO = 'choosing_age_to'
+VIEWING_QUESTIONNAIRES = 'viewing_questionnaires'
+ADD_TO_FAVORITE = 'add_to_favorite'
+VIEWING_FAVORITE_QUESTIONNAIRE = 'viewing_favorite_questionnaire'
 
 try:
     load_file = load_dotenv()
@@ -26,7 +37,7 @@ except Exception as e:
     raise Exception(f"Ошибка подключения к VK API: {e}")
 
 vk = vk_api.VkApi(token=token)
-longpoll = VkLongPoll(vk, wait=1)
+longpoll = VkLongPoll(vk, wait=2)
 
 
 def add_user_to_db(vk_id):
@@ -47,9 +58,9 @@ def add_user_to_db(vk_id):
 
         new_status = Status(
             user_vk_id=vk_id,
-            step='start', #надо поменять при согласовании статусов
+            step=START, #надо поменять при согласовании статусов
             search_criteria={},
-            list_applicants={},
+            list_applicants=[],
             step_datetime=datetime.now()
         )
         session.add(new_status)
@@ -60,7 +71,7 @@ def initial_launch (user_vk):
     """Первый запуск бота пользователем"""
     # Статус пользователя из БД
     user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
-    if user_status.step == 'start':
+    if user_status.step == START:
         write_message(user_vk, "Я знакомлю красивых людей и нахожу друзей по интересам 🥰")
         write_message(user_vk, "Жмите на кнопку чтобы составить твои предпочтения для поиска!")
 
@@ -72,66 +83,83 @@ def initial_launch (user_vk):
 
 def preference_formation(user_vk, message):
     """Формирование анкеты предпочтений пользователя"""
+    if not message:
+        return
     # Статус пользователя из БД
     user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
+    # Сбор данных для приоритета поиска
+    if user_status.step == START_MESSAGING:
+        # Если user обновляет предпочтения, поле надо почистить.
+        user_status.search_criteria = {}
+        session.commit()
 
-    if user_status.step == 'start_messaging':
-        # Сбор данных для приоритета поиска
         write_message(user_vk, "В каком городе искать?")
-        user_status.step = 'choosing_city'
+        user_status.step = CHOOSING_CITY
         session.commit()
         return
 
-    elif user_status.step == 'choosing_city':
+    elif user_status.step == CHOOSING_CITY:
         city = message # текст который введет пользователь
-        user_status.search_criteria['choosing_city'] = city
+        # К словарю просто добавляем новый ключ значение
+        user_status.search_criteria = {**user_status.search_criteria, 'city': city}
         session.commit()
 
         write_message(user_vk, "Какой пол тебя интересует? (М/Ж)")
-        user_status.step = 'choosing_gender'
+        user_status.step = CHOOSING_GENDER
         session.commit()
         return
 
-    elif user_status.step == 'choosing_gender':
-        gender = "men" if message.lower() == "м" else "woman"
-        user_status.search_criteria['choosing_gender'] = gender
+    elif user_status.step == CHOOSING_GENDER:
+        keyboard = VkKeyboard(one_time=True)
+        keyboard.add_button('М', color=VkKeyboardColor.PRIMARY)
+        keyboard.add_button('Ж', color=VkKeyboardColor.PRIMARY)
+
+        gender = "male" if text_message() == "м" else "female"
+        user_status.search_criteria = {**user_status.search_criteria, 'gender': gender}
         session.commit()
 
-        write_message(user_vk, "Какой возраст тебя интересует? (например: 20-30)") #такой запрос сокращает код
-        user_status.step = 'choosing_age'
+        write_message(user_vk, "Какой минимальный возраст тебя интересует?")
+        user_status.step = CHOOSING_AGE_FROM
         session.commit()
         return
 
-    elif user_status.step == 'choosing_age':
-        try:
-            age_range = message.split('-') # так как написали 20-30, значение надо разделить
-            user_status.search_criteria['age_from'] = int(age_range[0])
-            user_status.search_criteria['age_to'] = int(age_range[1])
+    elif user_status.step == CHOOSING_AGE_FROM:
+        age = message
+        user_status.search_criteria = {**user_status.search_criteria, 'age_from': age}
+        session.commit()
 
-            write_message(user_vk, "Супер!🎉 Предпочтения сохранены! ")
-            user_status.step = 'search'
-            session.commit()
-            return
-        except (ValueError, IndexError):
-            write_message(user_vk, "Неверный формат. Пример необходимой записи: 20-30")
-            return
+        write_message(user_vk, "Какой максимальный возраст тебе интересен?")
+        user_status.step = CHOOSING_AGE_TO
+        session.commit()
+        return
+
+    elif user_status.step == CHOOSING_AGE_TO:
+        age = message
+        user_status.search_criteria = {**user_status.search_criteria, 'age_to': age}
+        session.commit()
+
+        write_message(user_vk, "Супер!🎉 Предпочтения сохранены! ")
+        user_status.step = VIEWING_QUESTIONNAIRES
+        session.commit()
+        return
 
 
-def search_candidates(user_vk):
-    """Поиск кандидатов по предпочтениям"""
-
-    """Что мы имеем в параметрах для поиска
-    params = {
-        'city': criteria.get('choosing_city'),
-        'sex': 1 if criteria.get('choosing_gender') == 'woman' else 2,  # тут использую запись как  1 или 2 -- 1-жен,2-муж
-        'age_from': criteria.get('age_from'),
-        'age_to': criteria.get('age_to'),
-        'has_photo': 1,
-        'count': 10,
-        'fields': 'photo_max,domain'
-    }"""
-
-    pass
+# def search_candidates(user_vk):
+#     """Поиск кандидатов по предпочтениям"""
+#
+#     """Что мы имеем в параметрах для поиска
+#    {"city": "\u041a\u0430\u0437\u0430\u043d\u044c", "gender": "female", "age_from": "35", "age_to": "37"}
+#     params = {
+#         'city': criteria.get('city'),
+#         'sex': 1 if criteria.get('gender') == 'female' else 2,
+#         'age_from': criteria.get('age_from'),
+#         'age_to': criteria.get('age_to'),
+#         'has_photo': 1,
+#         'count': 10,
+#         'fields': 'photo_max,domain'
+#     }"""
+#
+#     pass
 
 
 def main():
@@ -148,31 +176,29 @@ def main():
             user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
 
             # Обработка команды 'Приступим'
-            if event.text.lower() == 'приступим' and user_status.step == 'start':
-                user_status.step = 'start_messaging'
+            if message == 'приступим' and user_status.step == START:
+                user_status.step = START_MESSAGING
                 session.commit()
                 preference_formation(user_vk, '')
                 continue
 
-            if user_status.step == 'start':
+            if user_status.step == START:
                 initial_launch(user_vk)
                 continue
 
-            if user_status.step in ['start_messaging', 'choosing_city', 'choosing_gender', 'choosing_age']:
+            if user_status.step in [START_MESSAGING, CHOOSING_CITY, CHOOSING_GENDER, CHOOSING_AGE_FROM, CHOOSING_AGE_TO]:
                 preference_formation(user_vk, event.text)
-                continue
-            # elif user_status.step == 'listing_favorites':
-            #    candidates = search_candidates(user_vk)
-                # Тут пока так, поменяем когда опишем функции показа кандидатов
-                if candidates:
-                    write_message(user_vk, f"Найдено {len(candidates)} кандидатов")
 
-            print(user_status.search_criteria)
-            write_message(user_vk, f"Данные для поиска сохранены")
-            session.commit()
+             # elif user_status.step == VIEWING_FAVORITES:
+             #    candidates = search_candidates(user_vk)
+             #    # Тут пока так, поменяем когда опишем функции показа кандидатов
+             #    if candidates:
+             #        write_message(user_vk, f"Найдено {len(candidates)} кандидатов")
+
+
+
 
 
 
 if __name__ == '__main__':
     main()
-
