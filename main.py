@@ -88,15 +88,45 @@ def preference_formation(user_vk, message):
     user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
     # Сбор данных для приоритета поиска
     if user_status.step == START_MESSAGING:
-        # Если user обновляет предпочтения, поле надо почистить.
+        # Если user обновляет предпочтения, поле search_criteria надо почистить.
         user_status.search_criteria = {}
         session.commit()
 
         write_message(user_vk, "В каком городе искать?")
+        keyboard = VkKeyboard(one_time=True)  # чтобы скрыть после нажатия
+        keyboard.add_button('Помощь', color=VkKeyboardColor.PRIMARY)
+        keyboard.add_button('Избранное', color=VkKeyboardColor.PRIMARY)
+        if message == 'Помощь':
+            user_status.step = VIEW_HELP
+            session.commit()
+
+            keyboard = VkKeyboard(one_time=True)  # чтобы скрыть после нажатия
+            keyboard.add_button('Новый поиск', color=VkKeyboardColor.PRIMARY)
+            keyboard.add_button('Просмотр пользователей', color=VkKeyboardColor.PRIMARY)
+
+            write_message(user_vk, "Я бот сообщества VK Dating Bot."
+                                   "Я создан, чтобы знакомить красивых людей и находить друзей по интересам!")
+            write_message(user_vk, "Навигация по чату простая, и имеет всего несколько кнопок.")
+            write_message(user_vk, "---Помощь --- Здесь я вас жду, чтобы помочь сориентироваться в навигации по чату.")
+            write_message(user_vk, "---Новый поиск --- Позволяет вам обновить свои предпочтения для поиска.")
+            write_message(user_vk, "---Избранное --- Позволяет вам просмотреть все понравившиеся аккаунты.")
+            write_message(user_vk, "---Назад --- Позволит вам вернуться к предыдущему пользователю.")
+            write_message(user_vk, "---Вперед --- Позволит вам перейти к следующему пользователю.")
+            if message == 'Новый поиск':
+                user_status.step = START_MESSAGING
+                session.commit()
+            elif message == 'Просмотр пользователей':
+                user_status.step = VIEWING_QUESTIONNAIRES
+                session.commit()
+
+        elif message == 'Избранное':
+            user_status.step = VIEWING_FAVORITE_QUESTIONNAIRE
+            session.commit()
+            # Просмотр списка избранных
+
         user_status.step = CHOOSING_CITY
         session.commit()
         return
-
 
     elif user_status.step == CHOOSING_CITY:
         city = message  # текст который введет пользователь
