@@ -98,40 +98,49 @@ def get_questionnaires_by_criteria(city_id: int, gender: int, age_from: int, age
 
     return ids_list
 
-def get_three_photos_from_questionnaires(questionnaires_ids: list) -> dict[int, list[tuple[str, int]]]:
-    """Получает три лучших фотографии для каждой найденной анкеты.
+def three_best_photos(user_vk_id):
+    """Получает три лучшие фотографии пользователя ВКонтакте.
 
     Args:
-        questionnaires_ids (list): Список идентификаторов ВК-пользователей.
+        user_vk_id: VK ID пользователя.
 
     Returns:
-        dict[int, list[tuple[str, int]]]: Словарь, где ключ — идентификатор анкеты,
-            а значение — список до трёх кортежей с URL фото и числом лайков.
+        dict: Словарь с информацией о пользователе и списком трёх лучших фото.
     """
-
-    three_photos_by_questionnaire = {}
-
-    for questionnaire_id in questionnaires_ids:
-        all_photos = []
-        response = vk.photos.get(
-            owner_id=questionnaire_id,
-            album_id='profile',
-            extended=1
+    
+    basic_response = vk.users.get(
+        user_ids=user_vk_id,
+        fields='sex'
         )
+    
+    time.sleep(0.35)
+    
+    response = vk.photos.get(
+        owner_id=user_vk_id,
+        album_id='profile',
+        extended=1
+        )
+    
+    time.sleep(0.35)
 
-        photo_count = response.get('count', 0)
-        if photo_count >= 3:
-            all_sizes = response.get('items')
-            for photo in all_sizes:
-                likes = photo.get('likes', {}).get('count', 0)
-                sizes = photo.get('sizes', [])
-                photo_url = sizes[-1]['url']
-                all_photos.append((photo_url, likes))
-        
-            sorted_photos = sorted(all_photos, key=lambda x: x[1], reverse=True)
-            top_3_photos = sorted_photos[:3]
-            three_photos_by_questionnaire[questionnaire_id] = top_3_photos
-        
-        time.sleep(0.35)
+    list_applicants = {} # Имеется ввиду, что запись будет осуществляться в это поле
+    all_photo = []
+    if response['count'] >= 3:
+        all_sizes_photos = response.get('items')
+        for photo in all_sizes_photos:
+            likes_count = photo.get('likes', {}).get('count', 0)
+            sizes = photo.get('sizes', [])
+            if sizes:
+                photo_x_url = sizes[-1]['url']
+                all_photo.append((photo_x_url, likes_count))
+            sorted_all_photos = sorted(all_photo, key=lambda x: x[1], reverse=True)[:3]
 
-    return three_photos_by_questionnaire
+            list_applicants[user_vk_id] = {
+                'user_vk_id': user_vk_id,
+                'name':  basic_response[0]['first_name'],
+                'surname':  basic_response[0]['last_name'],
+                'gender':  basic_response[0]['sex'],
+                'photos': sorted_all_photos
+            }
+
+    return list_applicants
