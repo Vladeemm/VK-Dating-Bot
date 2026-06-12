@@ -82,7 +82,7 @@ def get_questionnaires_by_criteria(city_id: int, gender: int, age_from: int, age
         'age_from': age_from,
         'age_to': age_to,
         'fields': 'is_closed, has_photo',
-        'count': 25
+        'count': 1000
     }
 
     response = vk.users.search(**params)
@@ -98,7 +98,7 @@ def get_questionnaires_by_criteria(city_id: int, gender: int, age_from: int, age
 
     return ids_list
 
-def three_best_photos(user_vk_id):
+def three_best_photos(user_vk_id) -> dict | None:
     """Получает три лучшие фотографии пользователя ВКонтакте.
 
     Args:
@@ -123,8 +123,9 @@ def three_best_photos(user_vk_id):
     
     time.sleep(0.35)
 
-    list_applicants = {} # Имеется ввиду, что запись будет осуществляться в это поле
+    questionnaire_info = {}
     all_photo = []
+
     if response['count'] >= 3:
         all_sizes_photos = response.get('items')
         for photo in all_sizes_photos:
@@ -135,12 +136,14 @@ def three_best_photos(user_vk_id):
                 all_photo.append((photo_x_url, likes_count))
             sorted_all_photos = sorted(all_photo, key=lambda x: x[1], reverse=True)[:3]
 
-            list_applicants[user_vk_id] = {
+            questionnaire_info[user_vk_id] = {
                 'user_vk_id': user_vk_id,
                 'name':  basic_response[0]['first_name'],
                 'surname':  basic_response[0]['last_name'],
                 'gender':  basic_response[0]['sex'],
                 'photos': sorted_all_photos
             }
+    else:
+        return None
 
-    return list_applicants
+    return questionnaire_info
