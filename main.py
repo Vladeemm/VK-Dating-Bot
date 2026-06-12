@@ -7,9 +7,8 @@ from dotenv import load_dotenv
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from DatingBotBase import session
 from vk_api.longpoll import VkLongPoll, VkEventType
-from actions import write_message, check_city, text_message
-from models import Users, Status
-from datetime import datetime
+from actions import write_message, check_city, view_help_button, add_user_to_db, menu_buttons, favorite_questionnaire
+from models import Status
 
 
 """ Статусы Пользователя в VK Bot """
@@ -39,45 +38,17 @@ vk = vk_api.VkApi(token=token)
 longpoll = VkLongPoll(vk, wait=2)
 
 
-def add_user_to_db(vk_id):
-    """Добавление пользователя в базу данных"""
-    user_info = vk.method('users.get', {'user_ids': vk_id})
-    if user_info:
-        first_name = user_info[0]['first_name']
-    else:
-        first_name = str(vk_id) #вдруг нет имени
-    user = session.query(Users).filter(Users.id == vk_id).first()
-    if not user:
-        new_user = Users(
-            id=vk_id,
-            name=first_name
-        )
-        session.add(new_user)
-        session.commit()
-
-        new_status = Status(
-            user_vk_id=vk_id,
-            step=START, #надо поменять при согласовании статусов
-            search_criteria={},
-            list_applicants=[],
-            step_datetime=datetime.now()
-        )
-        session.add(new_status)
-        session.commit()
-
-
 def initial_launch (user_vk):
     """Первый запуск бота пользователем"""
     # Статус пользователя из БД
     user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
     if user_status.step == START:
-        write_message(user_vk, "Я знакомлю красивых людей и нахожу друзей по интересам 🥰")
-        write_message(user_vk, "Жмите на кнопку чтобы составить твои предпочтения для поиска!")
+        write_message(user_vk, "Здравствуйте, я Бот который знакомит красивых людей и находит друзей по интересам 🥰")
 
         keyboard = VkKeyboard(one_time=True)  # чтобы скрыть после нажатия
         keyboard.add_button('Приступим', color=VkKeyboardColor.PRIMARY)
-
-        write_message(user_vk, "Нажмите 'Приступим'", keyboard=keyboard.get_keyboard())
+        write_message(user_vk, "Жмите на кнопку чтобы составить твои предпочтения для поиска!"
+                               "👇👇👇", keyboard=keyboard.get_keyboard())
 
 
 def preference_formation(user_vk, message):
@@ -86,50 +57,47 @@ def preference_formation(user_vk, message):
         return
     # Статус пользователя из БД
     user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
+
+    if message == '🆘 Помощь':
+        menu_buttons(user_vk, "Всегда рад помочь!",
+                     '⏪ Назад', one_time=False)
+        view_help_button(user_vk)
+
+    if message == '🆒 Избранное':
+        menu_buttons(user_vk, "Смотрим ваш список...",
+                     '⏪ Назад', '🆘 Помощь', one_time=False)
+        favorite_questionnaire(user_vk)
+        user_status.step = VIEWING_QUESTIONNAIRES
+        session.commit()
+
+    if message == '⏪ Назад':
+        menu_buttons(user_vk, "Вернемся к предыдущему действию.",
+                     '🆘 Помощь', '🆒 Избранное', one_time=False)
+        favorite_questionnaire(user_vk)
+        user_status.step = VIEWING_QUESTIONNAIRES
+        session.commit()
+
+
+
+
+
+
+
+
     # Сбор данных для приоритета поиска
     if user_status.step == START_MESSAGING:
         # Если user обновляет предпочтения, поле search_criteria надо почистить.
         user_status.search_criteria = {}
         session.commit()
-
-        write_message(user_vk, "В каком городе искать?")
-        keyboard = VkKeyboard(one_time=True)  # чтобы скрыть после нажатия
-        keyboard.add_button('Помощь', color=VkKeyboardColor.PRIMARY)
-        keyboard.add_button('Избранное', color=VkKeyboardColor.PRIMARY)
-        if message == 'Помощь':
-            user_status.step = VIEW_HELP
-            session.commit()
-
-            keyboard = VkKeyboard(one_time=True)  # чтобы скрыть после нажатия
-            keyboard.add_button('Новый поиск', color=VkKeyboardColor.PRIMARY)
-            keyboard.add_button('Просмотр пользователей', color=VkKeyboardColor.PRIMARY)
-
-            write_message(user_vk, "Я бот сообщества VK Dating Bot."
-                                   "Я создан, чтобы знакомить красивых людей и находить друзей по интересам!")
-            write_message(user_vk, "Навигация по чату простая, и имеет всего несколько кнопок.")
-            write_message(user_vk, "---Помощь --- Здесь я вас жду, чтобы помочь сориентироваться в навигации по чату.")
-            write_message(user_vk, "---Новый поиск --- Позволяет вам обновить свои предпочтения для поиска.")
-            write_message(user_vk, "---Избранное --- Позволяет вам просмотреть все понравившиеся аккаунты.")
-            write_message(user_vk, "---Назад --- Позволит вам вернуться к предыдущему пользователю.")
-            write_message(user_vk, "---Вперед --- Позволит вам перейти к следующему пользователю.")
-            if message == 'Новый поиск':
-                user_status.step = START_MESSAGING
-                session.commit()
-            elif message == 'Просмотр пользователей':
-                user_status.step = VIEWING_QUESTIONNAIRES
-                session.commit()
-
-        elif message == 'Избранное':
-            user_status.step = VIEWING_FAVORITE_QUESTIONNAIRE
-            session.commit()
-            # Просмотр списка избранных
+        menu_buttons(user_vk, "В каком городе искать?",
+                     '🆘 Помощь', '🆒 Избранное', one_time=False)
 
         user_status.step = CHOOSING_CITY
         session.commit()
         return
 
     elif user_status.step == CHOOSING_CITY:
-        city = message  # текст который введет пользователь
+        city = message
         if not check_city(city):
             write_message(user_vk, "Возможна ошибка, такой город не найден.\n"
                                    "Попробуйте еще раз.")
@@ -140,94 +108,102 @@ def preference_formation(user_vk, message):
         session.commit()
 
         keyboard = VkKeyboard(one_time=True)
-        keyboard.add_button('Муж.', color=VkKeyboardColor.PRIMARY)
-        keyboard.add_button('Жен.', color=VkKeyboardColor.PRIMARY)
-        write_message(user_vk, "Какой пол тебя интересует? (М/Ж)",
+        keyboard.add_button('♂️ Муж.', color=VkKeyboardColor.POSITIVE)
+        keyboard.add_button('♀️ Жен.', color=VkKeyboardColor.POSITIVE)
+        keyboard.add_line()
+        keyboard.add_button('Не имеет значение', color=VkKeyboardColor.POSITIVE)
+        write_message(user_vk, "Какой пол вас интересует? (М/Ж)",
                       keyboard=keyboard.get_keyboard())
         user_status.step = CHOOSING_GENDER
         session.commit()
         return
 
     elif user_status.step == CHOOSING_GENDER:
-        gender = "male" if message == "Муж." else "female"
-        user_status.search_criteria = {**user_status.search_criteria, 'gender': gender}
+        sex = "2" if message == "♂️ Муж." else "1" if message == "♀️ Жен." else "0"
+        user_status.search_criteria = {**user_status.search_criteria, 'sex': sex}
         session.commit()
 
-        write_message(user_vk, "Выберите возраст ОТ (18-99 лет)")
-        write_message(user_vk, "Какой минимальный возраст тебя интересует?")
+        write_message(user_vk, "Выберите возраст (от 18 до 99 лет)")
+        menu_buttons(user_vk, "Какой минимальный возраст вас интересует?",
+                     '🆘 Помощь', '🆒 Избранное', one_time=False)
+
+        write_message(user_vk, )
         user_status.step = CHOOSING_AGE_FROM
         session.commit()
         return
 
     elif user_status.step == CHOOSING_AGE_FROM:
         age = message
-        #надо проверить на веденное значение, что там не буквы
+        if not any(char.isdigit() for char in age):
+            write_message(user_vk, "Пожалуйста, ввести корректное значение.")
+            return
 
-        while int(age) < 18 or int(age) > 90:
-            write_message(user_vk, "Пожалуйста, ввести корректное число.\n"
-                                   "Попробуйте еще раз.")
-            age = text_message(user_vk)
+        if int(age) < 18 or int(age) > 90:
+            write_message(user_vk, "Пожалуйста, выберите возраст (от 18 до 99 лет)")
+            return
 
         user_status.search_criteria = {**user_status.search_criteria, 'age_from': age}
         session.commit()
 
-        write_message(user_vk, "Какой максимальный возраст тебе интересен?")
+        write_message(user_vk, "Какой максимальный возраст вам интересен?")
         user_status.step = CHOOSING_AGE_TO
         session.commit()
         return
 
     elif user_status.step == CHOOSING_AGE_TO:
         age = message
-        while int(age) < 18 or int(age) > 90:
-            write_message(user_vk, "Пожалуйста, ввести корректное число.\n"
-                                   "Попробуйте еще раз.")
-            age = text_message(user_vk)
+        min_age = user_status.search_criteria['age_from']
+        if not any(char.isdigit() for char in age):
+            write_message(user_vk, "Пожалуйста, ввести корректное значение.")
+            return
+        elif  int(age) < 18 or int(age) > 90:
+            write_message(user_vk, "Пожалуйста, выберите возраст (от 18 до 99 лет)")
+            return
+        elif int(age) < int(min_age):
+            write_message(user_vk, f"Пожалуйста, выберите возраст (от {min_age} до 99 лет)")
+            return
 
         user_status.search_criteria = {**user_status.search_criteria, 'age_to': age}
         session.commit()
 
-        write_message(user_vk, "Супер!🎉 Предпочтения сохранены! ")
+        write_message(user_vk, "Супер!🎉 Твои предпочтения сохранены, я готов к поиску! ")
         user_status.step = VIEWING_QUESTIONNAIRES
         session.commit()
         return
 
 
+
+
 # def search_candidates(user_vk):
 #     """Поиск кандидатов по предпочтениям"""
 #
-#     """Что мы имеем в параметрах для поиска
-#    {"city": "\u041a\u0430\u0437\u0430\u043d\u044c", "gender": "female", "age_from": "35", "age_to": "37"}
-#     params = {
-#         'city': criteria.get('city'),
-#         'sex': 1 if criteria.get('gender') == 'female' else 2,
-#         'age_from': criteria.get('age_from'),
-#         'age_to': criteria.get('age_to'),
-#         'has_photo': 1,
-#         'count': 10,
-#         'fields': 'photo_max,domain'
-#     }"""
-#
-#     pass
+#    pass
 
 
 def main():
     """Основной цикл работы бота"""
     print("Бот начал работу")
 
+    session.query(Status).update({Status.step: START})#Удалить из готового кода
+    session.commit()#Удалить из готового кода
+
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             user_vk = event.user_id
-            message = event.text.lower()
+            message = event.text
+
+            if event.peer_id != event.user_id:
+                continue
 
             add_user_to_db(user_vk)
 
             user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
 
             # Обработка команды 'Приступим'
-            if message == 'приступим' and user_status.step == START:
+            if message == 'Приступим' and user_status.step == START:
                 user_status.step = START_MESSAGING
                 session.commit()
-                preference_formation(user_vk, '')
+                preference_formation(user_vk, message)
                 continue
 
             if user_status.step == START:
