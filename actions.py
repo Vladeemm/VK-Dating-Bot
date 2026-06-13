@@ -69,15 +69,6 @@ def write_message(user_id, message, keyboard=None):
     vk.method('messages.send', params)
 
 
-# def text_message(user_id):
-#     """Функция для определения поступивших сообщений из конкретного чата"""
-#     for event in longpoll.listen():
-#         if event.type == VkEventType.MESSAGE_NEW and event.user_id == user_id:
-#             message = event.text
-#             return message
-#     return None
-
-
 def check_city(city_name, country_id=1) -> bool:
     """Проверяет наличие в базе данных ВКонтакте города России"""
     params = {
@@ -104,14 +95,17 @@ def view_help_button(user_vk):
     """Бот отправляет сообщения информационного характера"""
     write_message(user_vk, "Вас обслуживает бот сообщества VK Dating Bot. "
                            "Я создан, чтобы знакомить красивых людей и находить друзей по интересам!")
-    time.sleep(0.5)
-    write_message(user_vk, "Навигация по чату простая, и имеет всего несколько кнопок.")
-    time.sleep(1)
-    write_message(user_vk, "--- 🆘 Помощь --- Здесь я вас жду, чтобы помочь сориентироваться в навигации по чату.")
-    write_message(user_vk, "--- 🔎 Новый поиск --- Позволяет вам обновить свои предпочтения для поиска.")
-    write_message(user_vk, "--- 🆒 Избранное --- Позволяет вам просмотреть все понравившиеся аккаунты.")
-    write_message(user_vk, "--- ⏪ Назад --- Позволит вам вернуться к предыдущему пользователю.")
-    write_message(user_vk, "--- ⏩ Вперед --- Позволит вам перейти к следующему пользователю.")
+    # time.sleep(0.5)
+    # write_message(user_vk, "Навигация по чату простая, и имеет всего несколько кнопок.")
+    # time.sleep(1)
+    # write_message(user_vk, "--- 🟢 Главное меню --- С помощью главного меню вы активируете три кнопки. "
+    #                        "--- 🔎 Новый поиск --- или --- Продолжить просмотр ---, --- 🆘 Помощь ---, --- 🆒 Избранное ---")
+    # write_message(user_vk, "--- ▶️ Продолжить --- Мы продолжим действие, на котором остановились")
+    # write_message(user_vk, "--- 🆘 Помощь --- Здесь я вас жду, чтобы помочь сориентироваться в навигации по чату.")
+    # write_message(user_vk, "--- 🔎 Поиск --- Позволяет вам обновить свои предпочтения для поиска.")
+    # write_message(user_vk, "--- 🆒 Избранное --- Позволяет вам просмотреть все понравившиеся аккаунты.")
+    # write_message(user_vk, "--- ⏪ Назад --- Позволит вам вернуться к предыдущему пользователю.")
+    # write_message(user_vk, "--- ⏩ Далее --- Позволит вам перейти к следующему пользователю.")
 
 def menu_buttons(user_vk, text, btn_text1, btn_text2=None, btn_text3=None, one_time=False):
     keyboard = VkKeyboard(one_time=one_time)
@@ -129,4 +123,4 @@ def favorite_questionnaire(user_vk):
         write_message(user_vk, "Извините, вы еще никого не добавили в избранное!")
 
     write_message(user_vk, "=== Тут будет логика на показ фаворитов ===")
-    pass
+    return

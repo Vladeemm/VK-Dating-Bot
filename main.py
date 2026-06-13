@@ -58,38 +58,12 @@ def preference_formation(user_vk, message):
     # Статус пользователя из БД
     user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
 
-    if message == '🆘 Помощь':
-        menu_buttons(user_vk, "Всегда рад помочь!",
-                     '⏪ Назад', one_time=False)
-        view_help_button(user_vk)
-
-    if message == '🆒 Избранное':
-        menu_buttons(user_vk, "Смотрим ваш список...",
-                     '⏪ Назад', '🆘 Помощь', one_time=False)
-        favorite_questionnaire(user_vk)
-        user_status.step = VIEWING_QUESTIONNAIRES
-        session.commit()
-
-    if message == '⏪ Назад':
-        menu_buttons(user_vk, "Вернемся к предыдущему действию.",
-                     '🆘 Помощь', '🆒 Избранное', one_time=False)
-        favorite_questionnaire(user_vk)
-        user_status.step = VIEWING_QUESTIONNAIRES
-        session.commit()
-
-
-
-
-
-
-
-
     # Сбор данных для приоритета поиска
     if user_status.step == START_MESSAGING:
         # Если user обновляет предпочтения, поле search_criteria надо почистить.
         user_status.search_criteria = {}
         session.commit()
-        menu_buttons(user_vk, "В каком городе искать?",
+        menu_buttons(user_vk, "Пожалуйста, напишите на русском название города.",
                      '🆘 Помощь', '🆒 Избранное', one_time=False)
 
         user_status.step = CHOOSING_CITY
@@ -97,6 +71,11 @@ def preference_formation(user_vk, message):
         return
 
     elif user_status.step == CHOOSING_CITY:
+        if message == '▶️ Продолжить':
+            menu_buttons(user_vk, "Пожалуйста напишите в каком городе искать знакомства",
+                         '🆘 Помощь', '🆒 Избранное', one_time=False)
+            return
+
         city = message
         if not check_city(city):
             write_message(user_vk, "Возможна ошибка, такой город не найден.\n"
@@ -127,7 +106,6 @@ def preference_formation(user_vk, message):
         menu_buttons(user_vk, "Какой минимальный возраст вас интересует?",
                      '🆘 Помощь', '🆒 Избранное', one_time=False)
 
-        write_message(user_vk, )
         user_status.step = CHOOSING_AGE_FROM
         session.commit()
         return
@@ -198,6 +176,26 @@ def main():
             add_user_to_db(user_vk)
 
             user_status = session.query(Status).filter(Status.user_vk_id == user_vk).first()
+
+            if message == '🆘 Помощь':
+                menu_buttons(user_vk, "Всегда рад помочь!",
+                             '▶️ Продолжить', '🆒 Избранное', one_time=True)
+                view_help_button(user_vk)
+                continue
+
+            if message == '🆒 Избранное':
+                menu_buttons(user_vk, "Смотрим ваш список...",
+                             '⏪ Назад', '⏩ Далее', '🟢 Главное меню', one_time=True)
+                favorite_questionnaire(user_vk)
+                user_status.step = VIEWING_FAVORITE_QUESTIONNAIRE
+                session.commit()
+                continue
+
+            if message == '🟢 Главное меню':
+                btn = "🔎 Продолжить просмотр" if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE else "🔎 Новый поиск"
+                menu_buttons(user_vk, "Что вы хотите?",
+                             f'{btn}', '🆘 Помощь', '🆒 Избранное', one_time=True)
+                continue
 
             # Обработка команды 'Приступим'
             if message == 'Приступим' and user_status.step == START:
