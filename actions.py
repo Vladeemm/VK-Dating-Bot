@@ -128,14 +128,6 @@ def menu_buttons(user_vk, text, btn_text1, btn_text2=None, btn_text3=None, one_t
     write_message(user_vk, f'{text}', keyboard=keyboard.get_keyboard())
 
 
-def get_favorite_questionnaire(user_vk):
-    user_favorite = session.query(Favorite).filter(Favorite.favorite_user_vk_id == user_vk).all()
-    if not user_favorite:
-        write_message(user_vk, "Извините, вы еще никого не добавили в избранное!")
-
-    write_message(user_vk, "=== Тут будет логика на показ фаворитов ===")
-    return
-
 def preference_formation(user_vk, message):
     """Формирование анкеты предпочтений пользователя"""
     if not message:

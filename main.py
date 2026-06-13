@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from DatingBotBase import session
 from vk_api.longpoll import VkLongPoll, VkEventType
 from actions import write_message, view_help_button, add_user_to_db, menu_buttons, preference_formation
+from bd_actions import get_favorite_questionnaire
 from models import Status
 
 """ Статусы Пользователя в VK Bot """
