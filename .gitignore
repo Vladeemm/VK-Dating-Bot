@@ -1,4 +1,7 @@
+/.venv
 __pycache__/
-.venv/
-.env
+.idea/
+/.env
+*.pyc
+*.pyo
 experiments.py
