@@ -130,11 +130,14 @@ def three_best_photos(user_vk_id) -> dict | None:
         all_sizes_photos = response.get('items')
         for photo in all_sizes_photos:
             likes_count = photo.get('likes', {}).get('count', 0)
-            sizes = photo.get('sizes', [])
-            if sizes:
-                photo_x_url = sizes[-1]['url']
-                all_photo.append((photo_x_url, likes_count))
-            sorted_all_photos = sorted(all_photo, key=lambda x: x[1], reverse=True)[:3]
+
+            photo_id = photo.get('id')
+            photo_owner_id = photo.get('owner_id')
+            
+            if photo_id and photo_owner_id:
+                all_photo.append((photo_owner_id, photo_id, likes_count))
+            
+            sorted_all_photos = sorted(all_photo, key=lambda x: x[2], reverse=True)[:3]
 
             questionnaire_info[user_vk_id] = {
                 'user_vk_id': user_vk_id,

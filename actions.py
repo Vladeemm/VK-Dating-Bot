@@ -1,4 +1,5 @@
 import os
+import random
 import time
 import requests
 import vk_api
@@ -253,3 +254,8 @@ def preference_formation(user_vk, message):
         user_status.step = VIEWING_QUESTIONNAIRES
         session.commit()
         return
+
+
+def get_random_id() -> int:
+    """ Возвращает случайное число из диапазона """
+    return random.randint(-2**30, 2**30)

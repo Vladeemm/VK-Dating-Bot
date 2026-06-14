@@ -1,6 +1,6 @@
 import random
 
-from statuses import VIEWING_QUESTIONNARES
+from statuses import VIEWING_QUESTIONNAIRES
 from vk_actions import get_questionnaires_by_criteria, three_best_photos
 
 # ----- просто что бы в этом файле не было красноты
@@ -13,9 +13,9 @@ gender = 1
 # ---------------
 
 # Это строка мне нужна только в этом файле что бы красных строчек ошибок не было
-user_status = VIEWING_QUESTIONNARES
+user_status = VIEWING_QUESTIONNIARES
 
-if user_status == VIEWING_QUESTIONNARES:
+if user_status == VIEWING_QUESTIONNAIRES:
     # Начало просмотра анкет по выбранному поиску
     # Собираем 1000 id
     ids_list = get_questionnaires_by_criteria(city_id, gender, age_from, age_to)
