@@ -82,7 +82,7 @@ def get_questionnaires_by_criteria(city_id: int, gender: int, age_from: int, age
         'age_from': age_from,
         'age_to': age_to,
         'fields': 'is_closed, has_photo',
-        'count': 1000
+        'count': 100
     }
 
     response = vk.users.search(**params)
@@ -147,3 +147,4 @@ def three_best_photos(user_vk_id) -> dict | None:
         return None
 
     return questionnaire_info
+
