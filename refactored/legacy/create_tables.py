@@ -32,11 +32,10 @@ conn.autocommit = True
 
 with conn.cursor() as cur:
     try:
-        cur.execute('CREATE DATABASE "DatingBotBase"')
+        cur.execute('CREATE DATABASE "DatingBotBase" ENCODING "UTF8"')
         print('База данных DatingBotBase создана!')
     except Exception:
         print('База данных DatingBotBase уже создана! Продолжайте работу')
 
-cur.close()
 conn.close()
 

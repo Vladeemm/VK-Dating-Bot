@@ -30,7 +30,7 @@
 
 **Работа с VK API:**
 
-1. get_user_info_from_vk(user_vk_id) -> list[name, city, age]:
+1.  add_user_to_db(user_vk_id) -> None:
 
 2. get_questionnaires_by_criteria(age_from, age_to, city, gender) -> list[dicts by vk_ids]:
     *Получаем JSON, преобразовываем, фильтруем что бы аккаунты были открыты.

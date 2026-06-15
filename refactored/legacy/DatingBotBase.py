@@ -17,7 +17,7 @@ try:
     DSN = (f"postgresql://{db_config['user']}:{db_config['password']}"
            f"@{db_config['host']}:{db_config['port']}/DatingBotBase")
     engine = sqlalchemy.create_engine(DSN)
-    print('Объект engine создан')
+    # print('Объект engine создан')
 
 except Exception:
     raise Exception("Вы где-то ошиблись! Создание ENGINE невозможно")
