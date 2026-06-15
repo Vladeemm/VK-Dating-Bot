@@ -63,15 +63,7 @@ def send_next_questionnaire(session, user_vk: int, user_status) -> bool:
             )
             
             # Отправляем сообщение
-            vk.method(
-                'messages.send', # type: ignore
-                {
-                    'user_id': user_vk,
-                    'message': message_text,
-                    'attachment': attachments,
-                    'random_id': get_random_id()
-                }
-            )
+            write_message(user_vk, message_text, attachments)
             
             # Показываем меню навигации (one_time=False, чтобы кнопки оставались)
             menu_buttons(
