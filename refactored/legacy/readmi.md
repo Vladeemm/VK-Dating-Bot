@@ -19,7 +19,7 @@
 
 
 ## 5. Схема созданной базы данных
-![scheme_DatingBotBase.png](scheme_DatingBotBase.png)
+![scheme_DatingBotBase.png](../../scheme_DatingBotBase.png)
 
 
 ## 6. Запуск проекта
