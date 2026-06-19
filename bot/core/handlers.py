@@ -29,7 +29,6 @@ from bot.user.favorites import (
 )
 from bot.user.search_flow import (
     get_current_questionnaire_id,
-    search_and_send_first_questionnaire,
     send_questionnaire,
 )
 from bot.database.repositories.status_repo import (
@@ -63,8 +62,53 @@ def send_help(user_vk: int) -> None:
     write_message(user_vk, 'Выберите действие:', keyboard=keyboard)
 
 
+class MessageHandler:
+    def __init__(self):
+        self.handlers = {
+            '🆘 Помощь': self.handle_help,
+            '🆒 Избранное': self.handle_favorites,
+            '🟢 Главное меню': self.handle_main_menu,
+            '🔎 Новый поиск': self.handle_new_search,
+            '🎬 Начать': self.handle_start,
+        }
+
+    def handle(self, user_vk: int, message: str, user_status):
+        handler = self.handlers.get(message)
+        if handler:
+            handler(user_vk, user_status)
+            return True
+        return False
+
+    def handle_help(self, user_vk: int, user_status) -> None:
+        write_message(user_vk, 'Всегда рад помочь!')
+        send_help(user_vk)
+
+    def handle_favorites(self, user_vk, user_status) -> None:
+        start_favorite_flow(user_vk)
+
+    def handle_main_menu(self, user_vk, user_status) -> None:
+        btn = (
+            '👀 Продолжить просмотр'
+            if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE
+            else '🔎 Новый поиск'
+        )
+        keyboard = build_menu_keyboard([btn, '🆘 Помощь', '🆒 Избранное'], one_time=True)
+        write_message(user_vk, 'Что вы хотите?', keyboard=keyboard)
+        update_status_step(user_status, START)
+
+    def handle_new_search(self, user_vk, user_status) -> None:
+        update_status_step(user_status, START_MESSAGING)
+        start_preference_flow(user_vk)
+
+    def handle_start(self, user_vk, user_status) -> None:
+        update_status_step(user_status, START_MESSAGING)
+        start_preference_flow(user_vk)
+
+
+
 def handle_events() -> None:
     longpoll = VkLongPoll(vk_group_session, wait=2)
+    message_handler = MessageHandler()
 
     for event in longpoll.listen():
         if event.type != VkEventType.MESSAGE_NEW or not event.to_me:
@@ -81,48 +125,7 @@ def handle_events() -> None:
         if not user_status:
             continue
 
-        if message == '🆘 Помощь':
-            write_message(user_vk, 'Всегда рад помочь!')
-            send_help(user_vk)
-            continue
-
-        if message == '🆒 Избранное':
-            start_favorite_flow(user_vk)
-            continue
-
-        if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE:
-            if message == '👀 Продолжить просмотр':
-                start_favorite_flow(user_vk)
-                continue
-            if message == '⏪ Назад':
-                show_previous_favorite(user_vk)
-                continue
-            if message == '⏩ Вперед':
-                show_next_favorite(user_vk)
-                continue
-            if message == '🗑 Удалить из Избранного':
-                delete_current_favorite(user_vk)
-                continue
-
-        if message == '🟢 Главное меню':
-            btn = (
-                '👀 Продолжить просмотр'
-                if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE
-                else '🔎 Новый поиск'
-            )
-            keyboard = build_menu_keyboard([btn, '🆘 Помощь', '🆒 Избранное'], one_time=True)
-            write_message(user_vk, 'Что вы хотите?', keyboard=keyboard)
-            update_status_step(user_status, START)
-            continue
-
-        if message == '🔎 Новый поиск':
-            update_status_step(user_status, START_MESSAGING)
-            start_preference_flow(user_vk)
-            continue
-
-        if message == '🎬 Начать' and user_status.step == START:
-            update_status_step(user_status, START_MESSAGING)
-            start_preference_flow(user_vk)
+        if message_handler.handle(user_vk, message, user_status):
             continue
 
         if user_status.step == START:
@@ -153,7 +156,6 @@ def handle_events() -> None:
                         'Больше анкет не найдено. Пожалуйста, измените критерии поиска или вернитесь в главное меню',
                     )
                 continue
-
             if message == '❤ В избранное':
                 current_questionnaire_id = get_current_questionnaire_id(user_status)
                 if current_questionnaire_id is None:
@@ -176,5 +178,25 @@ def handle_events() -> None:
                 )
                 continue
 
-            write_message(user_vk, 'Пожалуйста, выберите одну из кнопок: ⏩ Далее, ❤ В избранное, 🟢 Главное меню или 🆒 Избранное.')
+            write_message(user_vk, 'Пожалуйста, выберите одну из кнопок: '
+                                   '⏩ Далее, '
+                                   '❤ В избранное, '
+                                   '🟢 Главное меню или '
+                                   '🆒 Избранное.')
             continue
+
+        if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE:
+            if message == '👀 Продолжить просмотр':
+                start_favorite_flow(user_vk)
+                continue
+            if message == '⏪ Назад':
+                show_previous_favorite(user_vk)
+                continue
+            if message == '⏩ Вперед':
+                show_next_favorite(user_vk)
+                continue
+            if message == '🗑 Удалить из Избранного':
+                delete_current_favorite(user_vk)
+                continue
+
+
