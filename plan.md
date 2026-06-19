@@ -52,8 +52,6 @@
 
 1. Удалить или архивировать ненужные файлы:
    - `experiments.py`
-   - `for_main.py`
-   - `create_tables.py`
    - `DatingBotBase.py`
    - `actions.py`
    - `bd_actions.py`

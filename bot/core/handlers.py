@@ -87,14 +87,16 @@ class MessageHandler:
         start_favorite_flow(user_vk)
 
     def handle_main_menu(self, user_vk, user_status) -> None:
-        btn = (
-            '👀 Продолжить просмотр'
-            if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE
-            else '🔎 Новый поиск'
-        )
-        keyboard = build_menu_keyboard([btn, '🆘 Помощь', '🆒 Избранное'], one_time=True)
+        btn1 = ('👀 Продолжить просмотр'
+                if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE
+                else '🔎 Новый поиск'
+                )
+        btn2 = ('🪪 К просмотру кандидатов'
+                if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE
+                else '🆒 Избранное'
+                )
+        keyboard = build_menu_keyboard([btn1, '🆘 Помощь', btn2], one_time=True)
         write_message(user_vk, 'Что вы хотите?', keyboard=keyboard)
-        update_status_step(user_status, START)
 
     def handle_new_search(self, user_vk, user_status) -> None:
         update_status_step(user_status, START_MESSAGING)
@@ -186,6 +188,10 @@ def handle_events() -> None:
             continue
 
         if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE:
+            if message == '🪪 К просмотру кандидатов':
+                user_status.step = VIEWING_QUESTIONNAIRES
+                send_questionnaire(user_vk, user_status)
+                continue
             if message == '👀 Продолжить просмотр':
                 start_favorite_flow(user_vk)
                 continue
