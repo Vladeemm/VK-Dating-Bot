@@ -1,20 +1,10 @@
 from typing import Any, Dict, Optional
-from DatingBotBase import session
-from actions import get_random_id, menu_buttons, write_message
-from models import Favorite, Status
+from actions import menu_buttons, write_message
+from models import Status
 from sqlalchemy import select
 
 from vk_actions import three_best_photos, vk
 
-
-def get_favorite_questionnaire(user_vk):
-    """Формирует анкету с данными и отправляет её в чат"""
-    user_favorite = session.query(Favorite).filter(Favorite.favorite_user_vk_id == user_vk).all()
-    if not user_favorite:
-        write_message(user_vk, "Извините, вы еще никого не добавили в избранное!")
-
-    write_message(user_vk, "=== Тут будет логика на показ фаворитов ===")
-    return
 
 def get_search_criteria(session, user_vk_id: int) -> Optional[Dict[str, Any]]:
     """ Получение критериев поиска из БД """
