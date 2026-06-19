@@ -132,6 +132,60 @@ def menu_buttons(user_vk, text, btn_text1, btn_text2=None, btn_text3=None, one_t
     write_message(user_vk, f'{text}', keyboard=keyboard.get_keyboard())
 
 
+def validate_age_input(user_vk: int, age: str):
+    """Валидация ввода возраста."""
+    if not age or not age.strip():
+        write_message(user_vk, "Пожалуйста, укажите предпочитаемый возраст.")
+        return False
+
+    age = age.strip()
+
+    if age.startswith('-'):
+        write_message(user_vk, "Где вы видели отрицательный возраст?")
+        return False
+    if not age.isdigit():
+        write_message(user_vk, "Пожалуйста, вводите только цифры.")
+        return False
+
+    try:
+        age_int = int(age)
+    except (ValueError, OverflowError):
+        write_message(user_vk, "Прошу ввести корректное число.")
+        return False
+
+    if age_int < 18:
+        write_message(user_vk, "Возраст должен быть не менее 18 лет.")
+        return False
+    if age_int > 99:
+        write_message(user_vk, "Возраст должен быть не более 99 лет.")
+        return False
+    return age_int
+
+
+def validate_city_input(user_vk: int, city: str):
+    """Валидация ввода города."""
+    if not city or not city.strip():
+        write_message(user_vk, "Пожалуйста, введите желаемый город.")
+        return False
+
+    city = city.strip()
+
+    if city.isdigit():
+        write_message(user_vk, "Пишите грамотно, прописью.")
+        return False
+    if len(city) <= 2:
+        write_message(user_vk, "Это не серьезно. Начните хотя бы с трех букв.")
+        return False
+    if len(city) > 25:
+        write_message(user_vk, "В России городом с самым длинным названием "
+                               "признан Александровск-Сахалинский, расположенный "
+                               "на Дальнем Востоке. "
+                               "Его название состоит из 25 символов.")
+        return False
+
+    return city
+
+
 def preference_formation(user_vk, message):
     """Формирование анкеты предпочтений пользователя"""
     if not message:
@@ -158,14 +212,15 @@ def preference_formation(user_vk, message):
             return
 
         city = message
-        if not check_city(city):
+        valid_city = validate_city_input(user_vk, city)
+        if not check_city(valid_city):
             write_message(user_vk, "Возможна ошибка, такой город не найден.\n"
                                    "Попробуйте еще раз.")
             menu_buttons(user_vk, "Пожалуйста напишите в каком городе искать знакомства",
                          '🟢 Главное меню', '🆒 Избранное', one_time=False)
             return
 
-        city_id = get_city_id(city)
+        city_id = get_city_id(valid_city)
         # К словарю просто добавляем новый ключ значение
         user_status.search_criteria = {**user_status.search_criteria, 'city': city_id}
         session.commit()
@@ -216,15 +271,11 @@ def preference_formation(user_vk, message):
             return
 
         age = message
-        if not any(char.isdigit() for char in age):
-            write_message(user_vk, "Пожалуйста, ввести корректное значение.")
+        age_int = validate_age_input(user_vk, age)
+        if age_int is None:
             return
 
-        if int(age) < 18 or int(age) > 90:
-            write_message(user_vk, "Пожалуйста, выберите возраст (от 18 до 99 лет)")
-            return
-
-        user_status.search_criteria = {**user_status.search_criteria, 'age_from': age}
+        user_status.search_criteria = {**user_status.search_criteria, 'age_from': age_int}
         session.commit()
 
         write_message(user_vk, "Напишите предельный возраст который вам интересен.")
@@ -234,23 +285,21 @@ def preference_formation(user_vk, message):
 
     elif user_status.step == CHOOSING_AGE_TO:
         if message == '▶️ Продолжить':
-            menu_buttons(user_vk, "Пожалуйста напишите какой предельный возраст который вам интересен.",
+            menu_buttons(user_vk, "Пожалуйста напишите какой предельный возраст вам интересен.",
                          '🟢 Главное меню', '🆒 Избранное', one_time=False)
             return
 
         age = message
+        age_int = validate_age_input(user_vk, age)
+        if age_int is None:
+            return
+
         min_age = user_status.search_criteria['age_from']
-        if not any(char.isdigit() for char in age):
-            write_message(user_vk, "Пожалуйста, ввести корректное значение.")
-            return
-        elif  int(age) < 18 or int(age) > 90:
-            write_message(user_vk, "Пожалуйста, выберите возраст (от 18 до 99 лет)")
-            return
-        elif int(age) < int(min_age):
+        if age_int < min_age:
             write_message(user_vk, f"Пожалуйста, выберите возраст (от {min_age} до 99 лет)")
             return
 
-        user_status.search_criteria = {**user_status.search_criteria, 'age_to': age}
+        user_status.search_criteria = {**user_status.search_criteria, 'age_to': age_int}
         session.commit()
 
         write_message(user_vk, "Супер!🎉 Твои предпочтения сохранены, я готов к поиску! ")

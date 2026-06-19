@@ -16,17 +16,11 @@
 
 4. get_status(user_vk_id) -> str:
 
-5. get_favorite_questionnaire(user_vk_id, favorite_vk_id) -> list[name, surname, age, city, photos, favorite_link]: 
+5. get_favorites_list(user_vk_id) -> list[of favorites_vk_ids]:
 
-    *В методе также формируется ссылка на вк страницу, с помощью favorite_vk_id*
+6. get_search_criteria(user_vk_id) -> dict[search_criteria]:
 
-    **ВАЖНО! Можем собирать не список, а словарь**
-
-6. get_favorites_list(user_vk_id) -> list[of favorites_vk_ids]:
-
-7. get_search_criteria(user_vk_id) -> dict[search_criteria]:
-
-8. delete_favorite_questionnaire(favorite_vk_id) -> bool:
+7. delete_favorite_questionnaire(favorite_vk_id) -> bool:
 
 **Работа с VK API:**
 
