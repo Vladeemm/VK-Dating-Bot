@@ -162,6 +162,30 @@ def validate_age_input(user_vk: int, age: str):
     return age_int
 
 
+def validate_city_input(user_vk: int, city: str):
+    """Валидация ввода города."""
+    if not city or not city.strip():
+        write_message(user_vk, "Пожалуйста, введите желаемый город.")
+        return False
+
+    city = city.strip()
+
+    if city.isdigit():
+        write_message(user_vk, "Пишите грамотно, прописью.")
+        return False
+    if len(city) <= 2:
+        write_message(user_vk, "Это не серьезно. Начните хотя бы с трех букв.")
+        return False
+    if len(city) > 25:
+        write_message(user_vk, "В России городом с самым длинным названием "
+                               "признан Александровск-Сахалинский, расположенный "
+                               "на Дальнем Востоке. "
+                               "Его название состоит из 25 символов.")
+        return False
+
+    return city
+
+
 def preference_formation(user_vk, message):
     """Формирование анкеты предпочтений пользователя"""
     if not message:
@@ -188,14 +212,15 @@ def preference_formation(user_vk, message):
             return
 
         city = message
-        if not check_city(city):
+        valid_city = validate_city_input(user_vk, city)
+        if not check_city(valid_city):
             write_message(user_vk, "Возможна ошибка, такой город не найден.\n"
                                    "Попробуйте еще раз.")
             menu_buttons(user_vk, "Пожалуйста напишите в каком городе искать знакомства",
                          '🟢 Главное меню', '🆒 Избранное', one_time=False)
             return
 
-        city_id = get_city_id(city)
+        city_id = get_city_id(valid_city)
         # К словарю просто добавляем новый ключ значение
         user_status.search_criteria = {**user_status.search_criteria, 'city': city_id}
         session.commit()
