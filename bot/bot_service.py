@@ -7,7 +7,7 @@
 from random import randrange
 from typing import Any, Dict, Optional
 
-from bot.vk_api.client import vk_group_api
+from .vk_api.client import vk_group_api
 
 
 def write_message(

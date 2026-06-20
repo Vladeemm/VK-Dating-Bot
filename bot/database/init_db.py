@@ -1,7 +1,7 @@
 """Инициализация базы данных и создание таблиц."""
 
-from bot.database.models import Base
-from bot.database.session import engine
+from .models import Base
+from .session import engine
 
 
 def initialize_database() -> None:

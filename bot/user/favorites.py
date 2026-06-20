@@ -2,24 +2,24 @@
 
 from typing import Optional, List
 
-from bot.database.models import Status
-from bot.database.repositories.favorite_repo import (
+from ..database.models import Status
+from ..database.repositories.favorite_repo import (
     add_favorite,
     get_favorites_by_user,
     get_favorite,
     remove_favorite,
 )
-from bot.database.repositories.status_repo import (
+from ..database.repositories.status_repo import (
     get_status_by_user_id,
     update_list_applicants,
     update_search_criteria,
     update_status_step,
 )
-from bot.bot_service import write_message
-from bot.ui.formatter import format_favorite_item, format_questionnaire_message
-from bot.ui.keyboard import build_menu_keyboard
-from bot.vk_api.photos import get_user_profile, three_best_photos
-from bot.core.states import (
+from ..bot_service import write_message
+from ..ui.formatter import format_favorite_item, format_questionnaire_message
+from ..ui.keyboard import build_menu_keyboard
+from ..vk_api.photos import get_user_profile, three_best_photos
+from ..core.states import (
     START,
     VIEWING_FAVORITE_QUESTIONNAIRE,
 )

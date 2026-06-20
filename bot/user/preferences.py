@@ -2,19 +2,19 @@
 
 from typing import Dict
 
-from bot.database.repositories.status_repo import update_search_criteria, update_status_step
-from bot.database.repositories.status_repo import get_status_by_user_id
-from bot.user.search_flow import search_and_send_first_questionnaire
-from bot.vk_api.users import get_city_id
-from bot.ui.keyboard import build_menu_keyboard
-from bot.ui.messages import (
+from ..database.repositories.status_repo import update_search_criteria, update_status_step
+from ..database.repositories.status_repo import get_status_by_user_id
+from ..user.search_flow import search_and_send_first_questionnaire
+from ..vk_api.users import get_city_id
+from ..ui.keyboard import build_menu_keyboard
+from ..ui.messages import (
     PREFERENCE_CITY_PROMPT,
     PREFERENCE_GENDER_PROMPT,
     PREFERENCE_AGE_FROM_PROMPT,
     PREFERENCE_AGE_TO_PROMPT,
 )
-from bot.bot_service import write_message
-from bot.core.states import (
+from ..bot_service import write_message
+from ..core.states import (
     CHOOSING_CITY,
     CHOOSING_GENDER,
     CHOOSING_AGE_FROM,

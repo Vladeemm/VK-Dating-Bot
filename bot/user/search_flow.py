@@ -3,17 +3,17 @@
 from random import shuffle
 from typing import Any, Dict, List, Optional
 
-from bot.bot_service import write_message
-from bot.database.models import Status
-from bot.database.repositories.status_repo import (
+from ..bot_service import write_message
+from ..database.models import Status
+from ..database.repositories.status_repo import (
     update_list_applicants,
     update_search_criteria,
     update_status_step,
 )
-from bot.ui.formatter import format_questionnaire_message
-from bot.ui.keyboard import build_menu_keyboard
-from bot.vk_api.photos import three_best_photos
-from bot.vk_api.search import get_questionnaires_by_criteria
+from ..ui.formatter import format_questionnaire_message
+from ..ui.keyboard import build_menu_keyboard
+from ..vk_api.photos import three_best_photos
+from ..vk_api.search import get_questionnaires_by_criteria
 
 SEARCH_NAVIGATION_BUTTONS = [
     '🟢 Главное меню',
