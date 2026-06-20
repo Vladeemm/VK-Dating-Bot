@@ -44,7 +44,7 @@ def should_retry(exception: Exception) -> bool:
     
     return False
 
-def vk_api_call(func: F) -> :
+def vk_api_call(func: F) -> Callable[..., Any]: # type: ignore
     """Декоратор для вызовов VK API с логикой повтора и обработкой ошибок.
 
     Оборачивает функции VK API автоматической логикой повтора, обрабатывающей
