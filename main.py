@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-﻿import logging
-from config import validate_config
-=======
-﻿from config import validate_config, validate_token
->>>>>>> origin/main
+import logging
+from config import validate_config, validate_token
 from bot.core.bot import run_bot
 
 def main() -> None:
