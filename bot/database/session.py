@@ -31,8 +31,12 @@ DSN = (
     f"@{db_config['host']}:{db_config['port']}/DatingBotBase"
 )
 
-engine = sqlalchemy.create_engine(DSN)
-SessionLocal = sessionmaker(bind=engine)
+engine = sqlalchemy.create_engine(
+    DSN,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    )
+SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 
 @contextmanager
@@ -53,6 +57,7 @@ def get_session() -> Generator[Session, None, None]:
         session.rollback()
         raise
     finally:
+        session.expunge_all()
         session.close()
 
 

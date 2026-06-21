@@ -112,16 +112,16 @@ def handle_events() -> None:
             )
             keyboard = build_menu_keyboard([btn, '🆘 Помощь', '🆒 Избранное'], one_time=True)
             write_message(user_vk, 'Что вы хотите?', keyboard=keyboard)
-            update_status_step(user_status, START)
+            user_status = update_status_step(user_status, START)
             continue
 
         if message == '🔎 Новый поиск':
-            update_status_step(user_status, START_MESSAGING)
+            user_status = update_status_step(user_status, START_MESSAGING)
             start_preference_flow(user_vk)
             continue
 
         if message == '🎬 Начать' and user_status.step == START:
-            update_status_step(user_status, START_MESSAGING)
+            user_status = update_status_step(user_status, START_MESSAGING)
             start_preference_flow(user_vk)
             continue
 
@@ -147,7 +147,8 @@ def handle_events() -> None:
 
         if user_status.step == VIEWING_QUESTIONNAIRES:
             if message == '⏩ Далее':
-                if not send_questionnaire(user_vk, user_status):
+                success, user_status = send_questionnaire(user_vk, user_status)
+                if not success:
                     write_message(
                         user_vk,
                         'Больше анкет не найдено. Пожалуйста, измените критерии поиска или вернитесь в главное меню',

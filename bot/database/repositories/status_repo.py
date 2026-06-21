@@ -9,7 +9,12 @@ from ..session import get_session
 
 def get_status_by_user_id(user_id: int) -> Optional[Status]:
     with get_session() as session:
-        return session.query(Status).filter(Status.user_vk_id == user_id).first()
+        status = session.query(Status).filter(Status.user_vk_id == user_id).first()
+        if status:
+            _ = status.step
+            _ = status.search_criteria
+            _ = status.list_applicants
+        return status
 
 
 def create_status(

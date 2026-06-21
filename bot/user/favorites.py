@@ -1,6 +1,7 @@
 """Управление избранными анкетами пользователя."""
 
-from typing import Optional, List
+import logging
+from typing import Optional, cast
 
 from ..database.models import Status
 from ..database.repositories.favorite_repo import (
@@ -32,15 +33,17 @@ FAVORITE_NAVIGATION_BUTTONS = [
 ]
 
 
+logger = logging.getLogger(__name__)
+
 def get_favorite_index(status: Status) -> int:
     """Возвращает индекс текущей анкеты в избранном."""
     return int((status.search_criteria or {}).get('favorite_index', 0))
 
 
-def set_favorite_index(status: Status, index: int) -> None:
+def set_favorite_index(status: Status, index: int) -> Status:
     """Сохраняет индекс текущей анкеты в избранном."""
     criteria = {**(status.search_criteria or {}), 'favorite_index': index}
-    update_search_criteria(status, criteria)
+    return update_search_criteria(status, criteria)
 
 
 def send_favorite_questionnaire(user_vk: int, status: Status) -> bool:
@@ -53,10 +56,10 @@ def send_favorite_questionnaire(user_vk: int, status: Status) -> bool:
     index = get_favorite_index(status)
     if index < 0:
         index = 0
-        set_favorite_index(status, index)
+        status = set_favorite_index(status, index)
     if index >= len(favorite_ids):
         index = len(favorite_ids) - 1
-        set_favorite_index(status, index)
+        status = set_favorite_index(status, index)
 
     favorite_vk_id = favorite_ids[index]
     favorite = get_favorite(user_vk, favorite_vk_id)
@@ -101,9 +104,9 @@ def start_favorite_flow(user_vk: int) -> None:
         return
 
     favorite_ids = [favorite.favorite_user_vk_id for favorite in favorites]
-    update_list_applicants(status, favorite_ids)
-    set_favorite_index(status, 0)
-    update_status_step(status, VIEWING_FAVORITE_QUESTIONNAIRE)
+    status = update_list_applicants(status, favorite_ids)
+    status = set_favorite_index(status, 0)
+    status = update_status_step(status, VIEWING_FAVORITE_QUESTIONNAIRE)
     send_favorite_questionnaire(user_vk, status)
 
 
@@ -119,7 +122,7 @@ def show_next_favorite(user_vk: int) -> None:
         write_message(user_vk, 'Это последняя анкета. Больше анкет нет.')
         return
 
-    set_favorite_index(status, index + 1)
+    status = set_favorite_index(status, index + 1)
     send_favorite_questionnaire(user_vk, status)
 
 
@@ -134,7 +137,7 @@ def show_previous_favorite(user_vk: int) -> None:
         write_message(user_vk, 'Это первая анкета в избранном.')
         return
 
-    set_favorite_index(status, index - 1)
+    status = set_favorite_index(status, index - 1)
     send_favorite_questionnaire(user_vk, status)
 
 
@@ -155,16 +158,16 @@ def delete_current_favorite(user_vk: int) -> None:
     write_message(user_vk, 'Анкета удалена из избранного.')
 
     if not favorite_ids:
-        update_list_applicants(status, None)
-        update_status_step(status, START)
+        status = update_list_applicants(status, None)
+        status = update_status_step(status, START)
         keyboard = build_menu_keyboard(['🎬 Начать', '🆘 Помощь', '🆒 Избранное'], one_time=True)
         write_message(user_vk, 'Избранное пустое. Возвращаемся в главное меню.', keyboard=keyboard)
         return
 
-    update_list_applicants(status, favorite_ids)
+    status = update_list_applicants(status, favorite_ids)
     if index >= len(favorite_ids):
         index = len(favorite_ids) - 1
-    set_favorite_index(status, index)
+    status = set_favorite_index(status, index)
     send_favorite_questionnaire(user_vk, status)
 
 
@@ -178,9 +181,9 @@ def add_to_favorites(user_vk: int, favorite_vk_id: int, name: str, surname: str,
     try:
         add_favorite(user_vk, favorite_vk_id, name, surname, gender, photos)
         write_message(user_vk, 'Анкета добавлена в избранное')
-    except Exception:
+    except Exception as e:
         write_message(user_vk, 'Не удалось добавить анкету в избранное. Попробуйте позже.')
-
+        logger.error(f"Ошибка при взаимодействии с БД: {e}")
 
 def remove_from_favorites(user_vk: int, favorite_vk_id: int) -> None:
     """Удаляет указанную анкету из избранного пользователя."""
