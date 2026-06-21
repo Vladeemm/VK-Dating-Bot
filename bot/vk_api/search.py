@@ -4,6 +4,7 @@
 ВКонтакте по городу, полу и возрасту с фильтрацией по наличию фото.
 """
 
+import time
 from typing import Any, Dict, Optional
 from .client import vk
 from .decorators import vk_api_call
@@ -41,6 +42,7 @@ def get_questionnaires_by_criteria(
     }
 
     response: Dict[str, Any] = vk.users.search(**params)
+    time.sleep(0.35)
 
     questionnaires: list[Dict[str, Any]] = response.get('items', [])
     ids_list: list[int] = []

@@ -3,8 +3,6 @@ import os
 import requests
 from dotenv import load_dotenv
 
-
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -12,9 +10,6 @@ load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 MY_VK_TOKEN = os.getenv('MY_VK_TOKEN')
 DATABASE = os.getenv('DATABASE')
-
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-
 
 def validate_config() -> None:
     missing = [name for name in ('BOT_TOKEN', 'MY_VK_TOKEN', 'DATABASE') if not globals()[name]]
