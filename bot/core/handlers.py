@@ -1,8 +1,8 @@
 """Обработчики событий бота."""
 
 from vk_api.longpoll import VkLongPoll, VkEventType
-from bot.vk_api.client import vk_group_session
-from bot.core.states import (
+from ..vk_api.client import vk_group_session
+from .states import (
     START,
     START_MESSAGING,
     VIEWING_FAVORITE_QUESTIONNAIRE,
@@ -12,33 +12,33 @@ from bot.core.states import (
     CHOOSING_AGE_TO,
     VIEWING_QUESTIONNAIRES,
 )
-from bot.user.service import add_user_to_db, send_welcome
-from bot.user.preferences import (
+from ..user.service import add_user_to_db, send_welcome
+from ..user.preferences import (
     start_preference_flow,
     handle_city_input,
     handle_gender_input,
     handle_age_from_input,
     handle_age_to_input,
 )
-from bot.user.favorites import (
+from ..user.favorites import (
     start_favorite_flow,
     show_next_favorite,
     show_previous_favorite,
     delete_current_favorite,
     add_to_favorites,
 )
-from bot.user.search_flow import (
+from ..user.search_flow import (
     get_current_questionnaire_id,
     send_questionnaire,
 )
-from bot.database.repositories.status_repo import (
+from ..database.repositories.status_repo import (
     get_status_by_user_id,
     update_status_step,
 )
-from bot.ui.keyboard import build_menu_keyboard
-from bot.ui.messages import HELP_LINES
-from bot.bot_service import write_message
-from bot.vk_api.photos import three_best_photos
+from ..ui.keyboard import build_menu_keyboard
+from ..ui.messages import HELP_LINES
+from ..bot_service import write_message
+from ..vk_api.photos import three_best_photos
 
 
 def initial_launch(user_vk: int) -> None:
@@ -97,15 +97,18 @@ class MessageHandler:
                 )
         keyboard = build_menu_keyboard([btn1, '🆘 Помощь', btn2], one_time=True)
         write_message(user_vk, 'Что вы хотите?', keyboard=keyboard)
+        # ← ВАЖНО: возвращаемый объект сохраняем
+        update_status_step(user_status, START)
 
     def handle_new_search(self, user_vk, user_status) -> None:
+        # ← ВАЖНО: возвращаемый объект сохраняем
         update_status_step(user_status, START_MESSAGING)
         start_preference_flow(user_vk)
 
     def handle_start(self, user_vk, user_status) -> None:
+        # ← ВАЖНО: возвращаемый объект сохраняем
         update_status_step(user_status, START_MESSAGING)
         start_preference_flow(user_vk)
-
 
 
 def handle_events() -> None:
@@ -127,6 +130,7 @@ def handle_events() -> None:
         if not user_status:
             continue
 
+        # Обработка глобальных кнопок через MessageHandler (из main)
         if message_handler.handle(user_vk, message, user_status):
             continue
 
@@ -152,7 +156,8 @@ def handle_events() -> None:
 
         if user_status.step == VIEWING_QUESTIONNAIRES:
             if message == '⏩ Далее':
-                if not send_questionnaire(user_vk, user_status):
+                success, user_status = send_questionnaire(user_vk, user_status)
+                if not success:
                     write_message(
                         user_vk,
                         'Больше анкет не найдено. Пожалуйста, измените критерии поиска или вернитесь в главное меню',
@@ -187,10 +192,11 @@ def handle_events() -> None:
                                    '🆒 Избранное.')
             continue
 
+        # Обработка кнопок навигации по избранному (объединённый блок)
         if user_status.step == VIEWING_FAVORITE_QUESTIONNAIRE:
             if message == '🪪 К просмотру кандидатов':
-                user_status.step = VIEWING_QUESTIONNAIRES
-                send_questionnaire(user_vk, user_status)
+                user_status = update_status_step(user_status, VIEWING_QUESTIONNAIRES)
+                success, user_status = send_questionnaire(user_vk, user_status)
                 continue
             if message == '👀 Продолжить просмотр':
                 start_favorite_flow(user_vk)
@@ -204,5 +210,3 @@ def handle_events() -> None:
             if message == '🗑 Удалить из Избранного':
                 delete_current_favorite(user_vk)
                 continue
-
-

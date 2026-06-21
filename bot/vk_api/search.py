@@ -1,12 +1,38 @@
-"""VK API поиск анкет по критериям."""
+"""Модуль для поиска анкет через VK API.
 
-from typing import List
-from bot.vk_api.client import vk
+Предоставляет функции для поиска открытых анкет пользователей
+ВКонтакте по городу, полу и возрасту с фильтрацией по наличию фото.
+"""
+
+import time
+from typing import Any, Dict, Optional
+from .client import vk
+from .decorators import vk_api_call
 
 
-def get_questionnaires_by_criteria(city_id: int, gender: int, age_from: int, age_to: int) -> List[int]:
-    """Получает список открытых анкет ВКонтакте по критериям."""
-    params = {
+@vk_api_call
+def get_questionnaires_by_criteria(
+    city_id: int,
+    gender: int,
+    age_from: int,
+    age_to: int,
+) -> Optional[list[int]]:
+    """Получить список ID открытых анкет ВКонтакте по критериям поиска.
+
+    Выполняет поиск пользователей через VK API и фильтрует результаты:
+    оставляет только открытые профили с фотографией.
+
+    Args:
+        city_id: ID города для поиска.
+        gender: Пол пользователя (1 — женский, 2 — мужской).
+        age_from: Минимальный возраст.
+        age_to: Максимальный возраст.
+
+    Returns:
+        list[int]: Список ID пользователей, подходящих под критерии.
+        None: Если запрос к API завершился неудачей или требуется капча.
+    """
+    params: Dict[str, Any] = {
         'city': city_id,
         'sex': gender,
         'age_from': age_from,
@@ -15,18 +41,15 @@ def get_questionnaires_by_criteria(city_id: int, gender: int, age_from: int, age
         'count': 100,
     }
 
-    try:
-        response = vk.users.search(**params)
-    except Exception as exc:
-        print(f'VK API search error: {exc}')
-        return []
+    response: Dict[str, Any] = vk.users.search(**params)
+    time.sleep(0.35)
 
-    questionnaires = response.get('items', [])
-    ids_list: List[int] = []
+    questionnaires: list[Dict[str, Any]] = response.get('items', [])
+    ids_list: list[int] = []
 
     for questionnaire in questionnaires:
-        has_photo = questionnaire.get('has_photo', 0)
-        is_closed = questionnaire.get('is_closed', True)
+        has_photo: int = questionnaire.get('has_photo', 0)
+        is_closed: bool = questionnaire.get('is_closed', True)
         if not is_closed and has_photo == 1:
             ids_list.append(questionnaire['id'])
 

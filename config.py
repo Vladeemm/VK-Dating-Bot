@@ -3,8 +3,6 @@ import os
 import requests
 from dotenv import load_dotenv
 
-
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -12,9 +10,6 @@ load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 MY_VK_TOKEN = os.getenv('MY_VK_TOKEN')
 DATABASE = os.getenv('DATABASE')
-
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-
 
 def validate_config() -> None:
     missing = [name for name in ('BOT_TOKEN', 'MY_VK_TOKEN', 'DATABASE') if not globals()[name]]
@@ -32,8 +27,13 @@ def validity(token: str, name: str = 'Личный токен', get_method: str 
         )
         data = resp.json()
 
-        if 'error' in data and data['error']['error_code'] == 5:
-            raise RuntimeError(f"{name} просрочен!")
+        if 'error' in data:
+            error_code = data['error'].get('error_code')
+            error_msg = data['error'].get('error_msg', 'Неизвестная ошибка')
+
+            if error_code == 5:
+                raise RuntimeError(f"{name} просрочен!")
+            raise RuntimeError(f"Ошибка API VK {error_code}: {error_msg}")
 
         logger.info(f"{name} валиден")
 

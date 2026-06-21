@@ -1,20 +1,21 @@
 """Логика формирования и валидации предпочтений пользователя."""
 
-from typing import Dict
+from typing import Any, Dict, Optional, cast
 
-from bot.database.repositories.status_repo import update_search_criteria, update_status_step
-from bot.database.repositories.status_repo import get_status_by_user_id
-from bot.user.search_flow import search_and_send_first_questionnaire
-from bot.vk_api.users import get_city_id
-from bot.ui.keyboard import build_menu_keyboard
-from bot.ui.messages import (
+from ..database.models import Status
+from ..database.repositories.status_repo import update_search_criteria, update_status_step
+from ..database.repositories.status_repo import get_status_by_user_id
+from ..user.search_flow import search_and_send_first_questionnaire
+from ..vk_api.users import get_city_id
+from ..ui.keyboard import build_menu_keyboard
+from ..ui.messages import (
     PREFERENCE_CITY_PROMPT,
     PREFERENCE_GENDER_PROMPT,
     PREFERENCE_AGE_FROM_PROMPT,
     PREFERENCE_AGE_TO_PROMPT,
 )
-from bot.bot_service import write_message
-from bot.core.states import (
+from ..bot_service import write_message
+from ..core.states import (
     CHOOSING_CITY,
     CHOOSING_GENDER,
     CHOOSING_AGE_FROM,
@@ -22,6 +23,69 @@ from bot.core.states import (
     VIEWING_QUESTIONNAIRES,
 )
 
+class AgeValidationError(Exception):
+    """ Класс ошибок при валидации возраста """
+    pass
+
+class AgeNotDigitError(AgeValidationError):
+    """ Возраст введен не цифрами """
+    pass
+
+class AgeOutOfRange(AgeValidationError):
+    """ Возраст вне заданного диапазона """
+    pass
+
+class AgeLessThanMinError(AgeValidationError):
+    """ Возраст меньше минимальной введенной границы """
+    pass
+
+def _validate_age_input(message: str, min_age: Optional[int]=None) -> int:
+    """Служебная функция валидации возраста.
+    
+    Raises:
+        AgeNotDigitError: Если возраст не является числом.
+        AgeOutOfRangeError: Если возраст вне диапазона 18-99.
+        AgeLessThanMinError: Если возраст меньше min_age.
+    
+    Returns:
+        int: Валидный возраст.
+    """
+    age = message.strip()
+
+    if not age.isdigit():
+        raise AgeNotDigitError()
+    
+    if len(age) >= 3:
+        raise AgeOutOfRange()  # По сути это защита от SQL инъекций    
+    
+    age = int(age)
+
+    if not 18 <= age <= 99:
+        raise AgeOutOfRange()
+    
+    if min_age is not None and age < min_age:
+            raise AgeLessThanMinError()
+        
+    return age
+
+def _update_criteria(status: Status, key: str, value: Any) -> Status:
+    """Обновляет поле search_criteria в статусе пользователя.
+
+    Безопасно объединяет текущие критерии с новым ключом-значением,
+    сохраняет изменения в базе данных и возвращает обновлённый объект.
+
+    Args:
+        status: Текущий объект статуса пользователя.
+        key: Ключ для добавления или обновления в словаре критериев.
+        value: Значение, которое нужно записать по указанному ключу.
+
+    Returns:
+        Status: Обновлённый объект статуса с применёнными изменениями.
+    """
+
+    current_criteria: Dict[str,  Any] = cast(Dict[str, Any], status.search_criteria or {})
+    new_criteria = {**current_criteria, key: value}
+    return update_search_criteria(status, new_criteria)
 
 def start_preference_flow(user_vk: int) -> None:
     """Запускает поток выбора поисковых критериев для пользователя.
@@ -33,7 +97,7 @@ def start_preference_flow(user_vk: int) -> None:
     if not user_status:
         return
 
-    update_search_criteria(user_status, {})
+    user_status = update_search_criteria(user_status, {})
     update_status_step(user_status, CHOOSING_CITY)
     keyboard = build_menu_keyboard(['🟢 Главное меню', '🆒 Избранное'], one_time=False)
     write_message(user_vk, PREFERENCE_CITY_PROMPT, keyboard=keyboard)
@@ -57,10 +121,9 @@ def handle_city_input(user_vk: int, message: str) -> None:
         write_message(user_vk, PREFERENCE_CITY_PROMPT, keyboard=keyboard)
         return
 
-    criteria = {**(user_status.search_criteria or {}), 'city': city_id}
-    update_search_criteria(user_status, criteria)
+    user_status: Status = _update_criteria(user_status, 'city', city_id)
     update_status_step(user_status, CHOOSING_GENDER)
-    keyboard = build_menu_keyboard(['♂️ Муж.', '♀️ Жен.', 'Не имеет значение', '🟢 Главное меню', '🆒 Избранное'], one_time=True)
+    keyboard: str = build_menu_keyboard(['♂️ Муж.', '♀️ Жен.', 'Не имеет значение', '🟢 Главное меню', '🆒 Избранное'], one_time=True)
     write_message(user_vk, PREFERENCE_GENDER_PROMPT, keyboard=keyboard)
 
 
@@ -80,8 +143,7 @@ def handle_gender_input(user_vk: int, message: str) -> None:
         return
 
     sex = 2 if message == '♂️ Муж.' else 1 if message == '♀️ Жен.' else 0
-    criteria = {**(user_status.search_criteria or {}), 'sex': sex}
-    update_search_criteria(user_status, criteria)
+    user_status = _update_criteria(user_status, 'sex', sex)
 
     update_status_step(user_status, CHOOSING_AGE_FROM)
     keyboard = build_menu_keyboard(['🟢 Главное меню', '🆒 Избранное'], one_time=False)
@@ -100,18 +162,16 @@ def handle_age_from_input(user_vk: int, message: str) -> None:
     if not user_status:
         return
 
-    age = message.strip()
-    if not age.isdigit():
-        write_message(user_vk, 'Пожалуйста, введите корректное значение.')
+    try:
+        age_int: int = _validate_age_input(message)
+    except AgeNotDigitError:
+        write_message(user_vk, "Пожалуйста, введите корректное значение")
         return
-
-    age_int = int(age)
-    if age_int < 18 or age_int > 99:
-        write_message(user_vk, 'Пожалуйста, выберите возраст (от 18 до 99 лет)')
+    except AgeOutOfRange:
+        write_message(user_vk, "Пожалуйста, введите возраст от 18 до 99 лет")
         return
-
-    criteria = {**(user_status.search_criteria or {}), 'age_from': age_int}
-    update_search_criteria(user_status, criteria)
+    
+    user_status = _update_criteria(user_status, 'age_from', age_int)
 
     update_status_step(user_status, CHOOSING_AGE_TO)
     keyboard = build_menu_keyboard(['🟢 Главное меню', '🆒 Избранное'], one_time=False)
@@ -129,24 +189,22 @@ def handle_age_to_input(user_vk: int, message: str) -> None:
     if not user_status:
         return
 
-    age = message.strip()
     min_age = (user_status.search_criteria or {}).get('age_from')
-    if not age.isdigit():
-        write_message(user_vk, 'Пожалуйста, введите корректное значение.')
+
+    try:
+        age_int: int = _validate_age_input(message, min_age)
+    except AgeNotDigitError:
+        write_message(user_vk, "Пожалуйста, введите корректное значение")
         return
-
-    age_int = int(age)
-    if age_int < 18 or age_int > 99:
-        write_message(user_vk, 'Пожалуйста, выберите возраст (от 18 до 99 лет)')
+    except AgeOutOfRange:
+        write_message(user_vk, "Пожалуйста, введите возраст от 18 до 99 лет")
         return
-
-    if min_age is not None and age_int < int(min_age):
-        write_message(user_vk, f'Пожалуйста, выберите возраст (от {min_age} до 99 лет)')
+    except AgeLessThanMinError:
+        write_message(user_vk, f"Пожалуйста введите возраст от {min_age} до 99 лет")
         return
+    
+    user_status = _update_criteria(user_status, 'age_to', age_int)
 
-    criteria = {**(user_status.search_criteria or {}), 'age_to': age_int}
-    update_search_criteria(user_status, criteria)
-
-    update_status_step(user_status, VIEWING_QUESTIONNAIRES)
+    user_status = update_status_step(user_status, VIEWING_QUESTIONNAIRES)
     write_message(user_vk, 'Супер!🎉 Твои предпочтения сохранены, я готов к поиску! ')
     search_and_send_first_questionnaire(user_vk, user_status)

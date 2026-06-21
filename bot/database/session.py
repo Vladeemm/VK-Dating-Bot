@@ -1,11 +1,19 @@
-"""Инициализация SQLAlchemy session."""
+"""Модуль управления сессиями SQLAlchemy.
+
+Предоставляет подключение к базе данных и контекстный менеджер
+для безопасной работы с транзакциями.
+"""
 
 import json
 import os
+from contextlib import contextmanager
+from typing import Generator
+
 import sqlalchemy
 from dotenv import load_dotenv
-from sqlalchemy.orm import sessionmaker
-from bot.database.models import Base
+from sqlalchemy.orm import Session, sessionmaker
+
+from .models import Base
 
 load_dotenv()
 
@@ -23,10 +31,36 @@ DSN = (
     f"@{db_config['host']}:{db_config['port']}/DatingBotBase"
 )
 
-engine = sqlalchemy.create_engine(DSN)
-Session = sessionmaker(bind=engine)
-session = Session()
+engine = sqlalchemy.create_engine(
+    DSN,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    )
+SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+
+
+@contextmanager
+def get_session() -> Generator[Session, None, None]:
+    """Получить сессию БД с автоматическим управлением транзакцией.
+
+    Создаёт новую сессию, выполняет commit при успешном завершении
+    блока, rollback при ошибке и закрывает сессию в любом случае.
+
+    Yields:
+        Session: Активная сессия SQLAlchemy для работы с БД.
+    """
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.expunge_all()
+        session.close()
 
 
 def init_db() -> None:
+    """Создать все таблицы в базе данных, если они ещё не существуют."""
     Base.metadata.create_all(engine)

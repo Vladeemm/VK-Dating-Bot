@@ -5,3 +5,8 @@ __pycache__/
 *.pyc
 *.pyo
 experiments.py
+corrections.txt
+bot.log
+critical.txt
+plan.md
+.coverage

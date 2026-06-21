@@ -1,10 +1,10 @@
 """Общий сервис бизнес-логики для бота."""
 
-from bot.database.repositories.user_repo import ensure_user
-from bot.database.repositories.status_repo import get_status_by_user_id, create_status
-from bot.ui.messages import WELCOME_TEXT
-from bot.bot_service import write_message
-from bot.vk_api.users import get_user_info_from_vk
+from ..database.repositories.user_repo import ensure_user
+from ..database.repositories.status_repo import get_status_by_user_id, create_status
+from ..ui.messages import WELCOME_TEXT
+from ..bot_service import write_message
+from ..vk_api.users import get_user_info_from_vk
 
 
 def add_user_to_db(user_vk: int) -> None:
