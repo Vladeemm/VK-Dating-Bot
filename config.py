@@ -27,8 +27,13 @@ def validity(token: str, name: str = 'Личный токен', get_method: str 
         )
         data = resp.json()
 
-        if 'error' in data and data['error']['error_code'] == 5:
-            raise RuntimeError(f"{name} просрочен!")
+        if 'error' in data:
+            error_code = data['error'].get('error_code')
+            error_msg = data['error'].get('error_msg', 'Неизвестная ошибка')
+
+            if error_code == 5:
+                raise RuntimeError(f"{name} просрочен!")
+            raise RuntimeError(f"Ошибка API VK {error_code}: {error_msg}")
 
         logger.info(f"{name} валиден")
 

@@ -1,7 +1,7 @@
 """Управление избранными анкетами пользователя."""
 
 import logging
-from typing import Optional, cast
+from typing import Optional
 
 from ..database.models import Status
 from ..database.repositories.favorite_repo import (
@@ -95,9 +95,11 @@ def send_favorite_questionnaire(user_vk: int, status: Status) -> bool:
 def start_favorite_flow(user_vk: int) -> None:
     """Запускает просмотр списка избранных анкет пользователя."""
     status = get_status_by_user_id(user_vk)
-    favorites = get_favorites_by_user(user_vk)
+
     if not status:
         return
+    
+    favorites = get_favorites_by_user(user_vk)
 
     if not favorites:
         write_message(user_vk, 'У вас пока нет анкет в избранном.')

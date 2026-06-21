@@ -52,11 +52,11 @@ def _validate_age_input(message: str, min_age: Optional[int]=None) -> int:
     """
     age = message.strip()
 
-    if len(age) >= 3:
-        raise AgeOutOfRange  # По сути это защита от SQL инъекций
-
     if not age.isdigit():
         raise AgeNotDigitError()
+    
+    if len(age) >= 3:
+        raise AgeOutOfRange()  # По сути это защита от SQL инъекций    
     
     age = int(age)
 
